@@ -17,18 +17,57 @@ public class TestDrive extends LinearOpMode {
     private static final float DEAD_WHEEL_OFFSET  = 4.65f;
     private static final float WHEEL_CIRCUMFERENCE_MM = (float) (Math.PI * 50f);
     private static final float COUNTS_PER_MM = (8192f/WHEEL_CIRCUMFERENCE_MM);
+    private static final float COUNTS_PER_ROTATION = 8192f;
+    private static final float wheelRadius = 0.98f;
+    private int leftEncoderPos = 0;
+    private int centerEncoderPos = 0;
+    private int rightEncoderPos = 0;
+    private double deltaLeftDistance = 0;
+    private double deltaRightDistance = 0;
+    private double deltaCenterDistance = 0;
+    private double x = 0;
+    private double y = 0;
+    private double theta = 0;
 
     // Wheels
     public DcMotor frontLeftMotor = null;
     public DcMotor frontRightMotor = null;
     public DcMotor rearLeftMotor = null;
     public DcMotor rearRightMotor = null;
-
-    public DcMotorEx encoderLeft = null;
-    public DcMotorEx encoderRight = null;
-    public DcMotorEx encoderRear = null;
+    // Encoders
+    // public DcMotorEx encoderLeft = null;
+    // public DcMotorEx encoderRight = null;
+    //public DcMotorEx encoderRear = null;
 
     private ElapsedTime period = new ElapsedTime();
+    
+// Encoder functions
+    /*public void resetTicks() {
+        resetLeftTicks();
+        resetCenterTicks();
+        resetRightTicks();
+    } */
+    //public void resetLeftTicks() {leftEncoderPos = encoderLeft.getCurrentPosition();}
+
+    // public int getLeftTicks() {return encoderLeft.getCurrentPosition() - leftEncoderPos;}
+
+    // public void resetRightTicks() {rightEncoderPos = encoderRight.getCurrentPosition();}
+
+    // public int getRightTicks() {return encoderRight.getCurrentPosition() - rightEncoderPos;}
+
+   // public void resetCenterTicks() {centerEncoderPos = encoderRear.getCurrentPosition();}
+
+   // public int getCenterTicks() {return encoderRear.getCurrentPosition() - centerEncoderPos;}
+
+   /* public void updatePosition() {
+        deltaLeftDistance = (getLeftTicks() / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+        deltaRightDistance = (getRightTicks() / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+        deltaCenterDistance = (getCenterTicks() / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+        theta  += (deltaLeftDistance - deltaRightDistance) / DEAD_WHEEL_LATERAL_DISTANCE;
+        x  += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.cos(theta) - deltaCenterDistance * Math.sin(theta);
+        y  += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.sin(theta) + deltaCenterDistance * Math.cos(theta);
+        resetTicks();
+    } */
 
     public TestDrive() {
     }
@@ -36,34 +75,33 @@ public class TestDrive extends LinearOpMode {
     @Override
     public void runOpMode() {
         String result = "";
-            encoderLeft = hardwareMap.get(DcMotorEx.class, "encoder_left");
-            encoderRight = hardwareMap.get(DcMotorEx.class, "encoder_right");
-            encoderRear = hardwareMap.get(DcMotorEx.class, "encoder_rear");
+        // encoderLeft = hardwareMap.get(DcMotorEx.class, "encoder_left");
+        // encoderRight = hardwareMap.get(DcMotorEx.class, "encoder_right");
+        // encoderRear = hardwareMap.get(DcMotorEx.class, "encoder_rear");
 
-            frontLeftMotor = hardwareMap.get(DcMotor.class, "front_left");
-            frontRightMotor = hardwareMap.get(DcMotor.class, "front_right");
-            rearLeftMotor = hardwareMap.get(DcMotor.class, "rear_left");
-            rearRightMotor = hardwareMap.get(DcMotor.class, "rear_right");
+        frontLeftMotor = hardwareMap.get(DcMotor.class, "front_left");
+        frontRightMotor = hardwareMap.get(DcMotor.class, "front_right");
+        rearLeftMotor = hardwareMap.get(DcMotor.class, "rear_left");
+        rearRightMotor = hardwareMap.get(DcMotor.class, "rear_right");
 
-            encoderLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-            encoderRight.setDirection(DcMotorSimple.Direction.FORWARD);
-            encoderRear.setDirection(DcMotorSimple.Direction.FORWARD);
+        // encoderLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        // encoderRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        // encoderRear.setDirection(DcMotorSimple.Direction.FORWARD);
 
-            frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
-            frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
-            rearLeftMotor.setDirection(DcMotor.Direction.FORWARD);
-            rearRightMotor.setDirection(DcMotor.Direction.FORWARD);
+        frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
+        frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
+        rearLeftMotor.setDirection(DcMotor.Direction.FORWARD);
+        rearRightMotor.setDirection(DcMotor.Direction.FORWARD);
 
-            frontLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            frontRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            rearLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            rearRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        frontLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rearLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rearRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-            frontLeftMotor.setPower(0);
-            frontRightMotor.setPower(0);
-            rearLeftMotor.setPower(0);
-            rearRightMotor.setPower(0);
-
+        frontLeftMotor.setPower(0);
+        frontRightMotor.setPower(0);
+        rearLeftMotor.setPower(0);
+        rearRightMotor.setPower(0);
 
 
         waitForStart();
@@ -87,26 +125,31 @@ public class TestDrive extends LinearOpMode {
                 speedDivisor = 1;
             }
 
-            float frontLeftPower = gamepad1LeftY - gamepad1LeftX - gamepad1RightX;
-            float frontRightPower = -gamepad1LeftY - gamepad1LeftX - gamepad1RightX;
-            float rearLeftPower = gamepad1LeftY + gamepad1LeftX - gamepad1RightX;
-            float rearRightPower = -gamepad1LeftY + gamepad1LeftX - gamepad1RightX;
+            float frontLeftPower = gamepad1LeftY - gamepad1LeftX + gamepad1RightX;
+            float frontRightPower = -gamepad1LeftY + gamepad1LeftX + gamepad1RightX;
+            float rearLeftPower = gamepad1LeftY + gamepad1LeftX + gamepad1RightX;
+            float rearRightPower = -gamepad1LeftY - gamepad1LeftX + gamepad1RightX;
 
-            frontLeftPower = Range.clip(frontLeftPower, -1, 1);
-            frontRightPower = Range.clip(frontRightPower, -1, 1);
-            rearLeftPower = Range.clip(rearLeftPower, -1, 1);
-            rearRightPower = Range.clip(rearRightPower, -1, 1);
+
+            frontLeftPower = Range.clip(frontLeftPower/speedDivisor, -1, 1);
+            frontRightPower = Range.clip(frontRightPower/speedDivisor, -1, 1);
+            rearLeftPower = Range.clip(rearLeftPower/speedDivisor, -1, 1);
+            rearRightPower = Range.clip(rearRightPower/speedDivisor, -1, 1);
 
             // write the values to the motors
-            frontLeftMotor.setPower(frontLeftPower / speedDivisor);
-            frontRightMotor.setPower(frontRightPower / speedDivisor);
-            rearLeftMotor.setPower(rearLeftPower / speedDivisor);
-            rearRightMotor.setPower(rearRightPower / speedDivisor);
+            frontLeftMotor.setPower(frontLeftPower);
+            frontRightMotor.setPower(frontRightPower);
+            rearLeftMotor.setPower(rearLeftPower);
+            rearRightMotor.setPower(rearRightPower);
+           /* updatePosition();
 
+            telemetry.addData("left encoder position:", getLeftTicks());
+            telemetry.addData("right encoder position", getRightTicks());
+            telemetry.addData("center encoder position", getCenterTicks());
+            telemetry.addData("x position", x);
+            telemetry.addData("y position", y); */
             telemetry.update();
             sleep(50);
         }
-}
-
-
+    }
 }
