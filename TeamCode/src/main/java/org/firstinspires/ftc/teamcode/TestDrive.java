@@ -22,6 +22,9 @@ public class TestDrive extends LinearOpMode {
     private int leftEncoderPos = 0;
     private int centerEncoderPos = 0;
     private int rightEncoderPos = 0;
+    private int leftEncoderPosPrev = 0;
+    private int centerEncoderPosPrev = 0;
+    private int rightEncoderPosPrev = 0;
     private double deltaLeftDistance = 0;
     private double deltaRightDistance = 0;
     private double deltaCenterDistance = 0;
@@ -35,39 +38,57 @@ public class TestDrive extends LinearOpMode {
     public DcMotor rearLeftMotor = null;
     public DcMotor rearRightMotor = null;
     // Encoders
-    // public DcMotorEx encoderLeft = null;
-    // public DcMotorEx encoderRight = null;
+    //public DcMotorEx encoderLeft = null;
+    //public DcMotorEx encoderRight = null;
     //public DcMotorEx encoderRear = null;
 
     private ElapsedTime period = new ElapsedTime();
     
 // Encoder functions
-    /*public void resetTicks() {
+     public void resetTicks() {
         resetLeftTicks();
         resetCenterTicks();
         resetRightTicks();
-    } */
-    //public void resetLeftTicks() {leftEncoderPos = encoderLeft.getCurrentPosition();}
+    }
+    public void resetLeftTicks() {leftEncoderPosPrev = leftEncoderPos;}
+    // arbitrary assignment of rear left motor for the center encoder, can and should be changed todo
+    public int getLeftTicks() {
+         leftEncoderPos = rearLeftMotor.getCurrentPosition();
+         telemetry.addData("left encoder position:", leftEncoderPos);
+         return leftEncoderPos - leftEncoderPosPrev;
+     }
 
-    // public int getLeftTicks() {return encoderLeft.getCurrentPosition() - leftEncoderPos;}
+    public void resetRightTicks() {rightEncoderPosPrev = rightEncoderPos;}
+    //  arbitrary assignment of rear right motor for the center encoder, can and should be changed todo
+    public int getRightTicks() {
+        rightEncoderPos = rearRightMotor.getCurrentPosition();
+        telemetry.addData("right encoder position:", rightEncoderPos);
+        return rightEncoderPos - rightEncoderPosPrev;
+    }
 
-    // public void resetRightTicks() {rightEncoderPos = encoderRight.getCurrentPosition();}
+    public void resetCenterTicks() {centerEncoderPosPrev = centerEncoderPos;}
 
-    // public int getRightTicks() {return encoderRight.getCurrentPosition() - rightEncoderPos;}
+    // arbitrary assignment of front left motor for the center encoder, can and should be changed todo
+    public int getCenterTicks() {
+       centerEncoderPos = frontLeftMotor.getCurrentPosition();
+        telemetry.addData("center encoder position:", centerEncoderPos);
+        return centerEncoderPos - centerEncoderPosPrev;
+    }
 
-   // public void resetCenterTicks() {centerEncoderPos = encoderRear.getCurrentPosition();}
-
-   // public int getCenterTicks() {return encoderRear.getCurrentPosition() - centerEncoderPos;}
-
-   /* public void updatePosition() {
+    public void updatePosition() {
         deltaLeftDistance = (getLeftTicks() / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
         deltaRightDistance = (getRightTicks() / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
         deltaCenterDistance = (getCenterTicks() / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
         theta  += (deltaLeftDistance - deltaRightDistance) / DEAD_WHEEL_LATERAL_DISTANCE;
         x  += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.cos(theta) - deltaCenterDistance * Math.sin(theta);
         y  += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.sin(theta) + deltaCenterDistance * Math.cos(theta);
+
+        telemetry.addData("theta:", "%.3f", theta);
+        telemetry.addData("x position", "%.3f", x);
+        telemetry.addData("y position", "%.3f", y);
+
         resetTicks();
-    } */
+    }
 
     public TestDrive() {
     }
@@ -93,10 +114,16 @@ public class TestDrive extends LinearOpMode {
         rearLeftMotor.setDirection(DcMotor.Direction.FORWARD);
         rearRightMotor.setDirection(DcMotor.Direction.FORWARD);
 
+        frontLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rearLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rearRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         frontLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         frontRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rearLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rearRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
 
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
@@ -141,13 +168,10 @@ public class TestDrive extends LinearOpMode {
             frontRightMotor.setPower(frontRightPower);
             rearLeftMotor.setPower(rearLeftPower);
             rearRightMotor.setPower(rearRightPower);
-           /* updatePosition();
 
-            telemetry.addData("left encoder position:", getLeftTicks());
-            telemetry.addData("right encoder position", getRightTicks());
-            telemetry.addData("center encoder position", getCenterTicks());
-            telemetry.addData("x position", x);
-            telemetry.addData("y position", y); */
+            updatePosition();
+
+
             telemetry.update();
             sleep(50);
         }
