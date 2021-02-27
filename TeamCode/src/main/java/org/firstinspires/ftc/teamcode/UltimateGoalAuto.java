@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.*;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -23,19 +25,18 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 import java.util.ArrayList;
 import java.util.List;
 
-
-@TeleOp(name="TestDrive", group="Test")
-public class TestDrive extends LinearOpMode {
+@Autonomous(name = "UltimateAuto")
+public class UltimateGoalAuto extends LinearOpMode {
 
     float speedDivisor = 1;
     float mmPerInch = 25.4f;
     float mmBotWidth = 18 * mmPerInch;
     float mmImageHeight = 6.375f * mmPerInch;
-    float mmFTCFieldWidth  = (12*12 - 2) * mmPerInch;
+    float mmFTCFieldWidth = (12 * 12 - 2) * mmPerInch;
     private static final float DEAD_WHEEL_LATERAL_DISTANCE = 14.5f; // Diameter in Inches
-    private static final float DEAD_WHEEL_OFFSET  = 8.5f;
+    private static final float DEAD_WHEEL_OFFSET = 8.5f;
     private static final float WHEEL_CIRCUMFERENCE_MM = (float) (Math.PI * 50f);
-    private static final float COUNTS_PER_MM = (8192f/WHEEL_CIRCUMFERENCE_MM);
+    private static final float COUNTS_PER_MM = (8192f / WHEEL_CIRCUMFERENCE_MM);
     private static final float COUNTS_PER_ROTATION = 8192f;
     private static final float wheelRadius = 0.98f;
     private int leftEncoderPos = 0;
@@ -49,13 +50,19 @@ public class TestDrive extends LinearOpMode {
     private double deltaCenterDistance = 0;
     private double x = 0;
     private double y = 0;
-    private double theta = Math.PI/2;
+    private double theta = Math.PI / 2;
+    int linePos = 85000;
+    boolean firsttime = true;
 
     private int left = 0;
     private int right = 0;
     private int center = 0;
     private double rightacc = 0;
     private double leftacc = 0;
+    double speed = -0.3;
+    double leftoff = 0.0;
+    double rightoff = 0.1;
+    double fudge = -0.0;
 
     int intakePower, launchPower;
     //Vuforia
@@ -70,6 +77,7 @@ public class TestDrive extends LinearOpMode {
     public DcMotor rearRightMotor = null;
     public DcMotor intakeMotor = null;
     public DcMotor launchMotor = null;
+    public Servo actuator = null;
 
     // Encoders
     //public DcMotorEx encoderLeft = null;
@@ -78,22 +86,28 @@ public class TestDrive extends LinearOpMode {
 
     private ElapsedTime period = new ElapsedTime();
 
-// Encoder functions
-     public void resetTicks() {
+    // Encoder functions
+    public void resetTicks() {
         resetLeftTicks();
         resetCenterTicks();
         resetRightTicks();
     }
-    public void resetLeftTicks() {leftEncoderPosPrev = leftEncoderPos;}
+
+    public void resetLeftTicks() {
+        leftEncoderPosPrev = leftEncoderPos;
+    }
+
     // arbitrary assignment of rear left motor for the center encoder, can and should be changed todo
     public int getLeftTicks() {
-         //facing the other direction so we must make it negative
-         leftEncoderPos = -rearLeftMotor.getCurrentPosition();
-         telemetry.addData("left encoder position:", leftEncoderPos);
-         return leftEncoderPos - leftEncoderPosPrev;
-     }
+        //facing the other direction so we must make it negative
+        leftEncoderPos = -rearLeftMotor.getCurrentPosition();
+        telemetry.addData("left encoder position:", leftEncoderPos);
+        return leftEncoderPos - leftEncoderPosPrev;
+    }
 
-    public void resetRightTicks() {rightEncoderPosPrev = rightEncoderPos;}
+    public void resetRightTicks() {
+        rightEncoderPosPrev = rightEncoderPos;
+    }
 
     public int getRightTicks() {
         rightEncoderPos = rearRightMotor.getCurrentPosition();
@@ -101,51 +115,53 @@ public class TestDrive extends LinearOpMode {
         return rightEncoderPos - rightEncoderPosPrev;
     }
 
-    public void resetCenterTicks() {centerEncoderPosPrev = centerEncoderPos;}
+    public void resetCenterTicks() {
+        centerEncoderPosPrev = centerEncoderPos;
+    }
 
     public int getCenterTicks() {
-       centerEncoderPos = frontLeftMotor.getCurrentPosition();
+        centerEncoderPos = frontLeftMotor.getCurrentPosition();
         telemetry.addData("center encoder position:", centerEncoderPos);
         return centerEncoderPos - centerEncoderPosPrev;
     }
 
     public void updatePosition() {
         double deltaTheta;
-    if (true) {
-        int l, r, c;
+        if (true) {
+            int l, r, c;
 
-        l = getLeftTicks();
-        r = getRightTicks();
-        c = getCenterTicks();
-        c -= (r - l)/2;
+            l = getLeftTicks();
+            r = getRightTicks();
+            c = getCenterTicks();
+            c -= (r - l) / 2;
 
-        deltaLeftDistance = (l / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
-        deltaRightDistance = (r / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
-        deltaCenterDistance = (c / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+            deltaLeftDistance = (l / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+            deltaRightDistance = (r / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+            deltaCenterDistance = (c / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
 
-        telemetry.addData("L,R,C", "%d,%d,%d", l,r,c);
+            telemetry.addData("L,R,C", "%d,%d,%d", l, r, c);
 
-    } else {
-        left = 10; // * (int) Math.round(9 + Math.random());
-        right = -10; //* (int) Math.round(9 + Math.random());
-        center = 0;
+        } else {
+            left = 10; // * (int) Math.round(9 + Math.random());
+            right = -10; //* (int) Math.round(9 + Math.random());
+            center = 0;
 
-        deltaLeftDistance = (left / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
-        deltaRightDistance = (right / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
-        deltaCenterDistance = (center / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
-        rightacc += deltaRightDistance;
-        leftacc += deltaLeftDistance;
+            deltaLeftDistance = (left / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+            deltaRightDistance = (right / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+            deltaCenterDistance = (center / COUNTS_PER_ROTATION) * 2.0 * Math.PI * wheelRadius;
+            rightacc += deltaRightDistance;
+            leftacc += deltaLeftDistance;
 
-        telemetry.addData("L,R", "%d, %d", left, right);
-        telemetry.addData("LAcc, RAcc", "%.2f, %.2f", leftacc, rightacc);
+            telemetry.addData("L,R", "%d, %d", left, right);
+            telemetry.addData("LAcc, RAcc", "%.2f, %.2f", leftacc, rightacc);
 
-    }
-        deltaTheta  = (deltaLeftDistance - deltaRightDistance) / DEAD_WHEEL_LATERAL_DISTANCE;
+        }
+        deltaTheta = (deltaLeftDistance - deltaRightDistance) / DEAD_WHEEL_LATERAL_DISTANCE;
         theta -= deltaTheta;
         telemetry.addData("center deltas", "%.2f, %.2f", deltaCenterDistance, (deltaTheta * DEAD_WHEEL_OFFSET));
         deltaCenterDistance += deltaTheta * DEAD_WHEEL_OFFSET;
-        x  += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.cos(theta) - deltaCenterDistance * Math.sin(theta);
-        y  += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.sin(theta) + deltaCenterDistance * Math.cos(theta);
+        x += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.cos(theta) - deltaCenterDistance * Math.sin(theta);
+        y += (((deltaLeftDistance + deltaRightDistance) / 2.0)) * Math.sin(theta) + deltaCenterDistance * Math.cos(theta);
 
 
         telemetry.addData("theta:", "%.3f", theta);
@@ -155,12 +171,21 @@ public class TestDrive extends LinearOpMode {
         resetTicks();
     }
 
-    public TestDrive() {
+    enum AutoState {
+        START,
+        DRIVE,
+        DETECT,
+        MOVE,
+        SHOOT,
+        FINISH,
     }
 
     @Override
     public void runOpMode() {
         String result = "";
+        int leftPos, rightPos;
+
+        leftPos = rightPos = 0;
 
         webcamName = hardwareMap.get(WebcamName.class, "webcam");
 
@@ -196,7 +221,7 @@ public class TestDrive extends LinearOpMode {
         OpenGLMatrix BlueTowerGoalLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(-mmFTCFieldWidth/4, mmFTCFieldWidth/2, mmImageHeight)
+                .translation(-mmFTCFieldWidth / 4, mmFTCFieldWidth / 2, mmImageHeight)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XYZ,
@@ -206,7 +231,7 @@ public class TestDrive extends LinearOpMode {
         OpenGLMatrix RedTowerGoalLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(mmFTCFieldWidth/4, mmFTCFieldWidth/2, mmImageHeight)
+                .translation(mmFTCFieldWidth / 4, mmFTCFieldWidth / 2, mmImageHeight)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XYZ,
@@ -216,7 +241,7 @@ public class TestDrive extends LinearOpMode {
         OpenGLMatrix FrontWallLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(0, -mmFTCFieldWidth/2, mmImageHeight)
+                .translation(0, -mmFTCFieldWidth / 2, mmImageHeight)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XYZ,
@@ -226,7 +251,7 @@ public class TestDrive extends LinearOpMode {
         OpenGLMatrix BlueAllianceLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(-mmFTCFieldWidth/2, 0, mmImageHeight)
+                .translation(-mmFTCFieldWidth / 2, 0, mmImageHeight)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XYZ,
@@ -236,7 +261,7 @@ public class TestDrive extends LinearOpMode {
         OpenGLMatrix RedAllianceLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(mmFTCFieldWidth/2, 0, mmImageHeight)
+                .translation(mmFTCFieldWidth / 2, 0, mmImageHeight)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XYZ,
@@ -254,6 +279,7 @@ public class TestDrive extends LinearOpMode {
         rearRightMotor = hardwareMap.get(DcMotor.class, "rear_right");
         launchMotor = hardwareMap.get(DcMotor.class, "launch_motor");
         intakeMotor = hardwareMap.get(DcMotor.class, "intake_motor");
+        actuator = hardwareMap.get(Servo.class, "actuator");
 
         frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
@@ -261,6 +287,7 @@ public class TestDrive extends LinearOpMode {
         rearRightMotor.setDirection(DcMotor.Direction.FORWARD);
         launchMotor.setDirection(DcMotor.Direction.FORWARD);
         intakeMotor.setDirection(DcMotor.Direction.FORWARD);
+        actuator.setDirection(Servo.Direction.FORWARD);
 
         frontLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         frontRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -282,83 +309,125 @@ public class TestDrive extends LinearOpMode {
         rearRightMotor.setPower(0);
         launchMotor.setPower(0);
         intakeMotor.setPower(0);
-
+        actuator.setPosition(0.0);
         waitForStart();
 
         while (opModeIsActive()) {
-            boolean gamepad1DPadUp = gamepad1.dpad_up;
-            boolean gamepad1DPadDown = gamepad1.dpad_down;
-            boolean gamepad1LeftBumper = gamepad1.left_bumper;
-            boolean gamepad1Rightbumper = gamepad1.right_bumper;
-            float gamepad1LeftY = gamepad1.left_stick_y;
-            float gamepad1LeftX = gamepad1.left_stick_x;
-            float gamepad1RightX = gamepad1.right_stick_x;
-            boolean gamepad1A = gamepad1.a;
-            boolean gamepad1B = gamepad1.b;
-            boolean gamepad1X = gamepad1.x;
 
-            if (gamepad1X) {
-                speedDivisor = 4;
-            }
-            if (gamepad1A) {
-                speedDivisor = 2;
-            }
-            if (gamepad1B) {
-                speedDivisor = 1;
-            }
-            if (gamepad1DPadUp) {
-                launchPower = 1;
-            }
-            if (gamepad1DPadDown) {
-                launchPower = 0;
-            }
-            if (gamepad1Rightbumper) {
-                intakePower = 1;
-            }
-            if (gamepad1LeftBumper) {
-                intakePower = 0;
-            }
+            if (firsttime) {
+                do {
+                    frontRightMotor.setPower(-speed + rightoff);
+                    rearLeftMotor.setPower(speed + leftoff);
+                    rearRightMotor.setPower(-speed + rightoff);
+                    frontLeftMotor.setPower(speed + leftoff);
 
 
-            float frontLeftPower = gamepad1LeftY - gamepad1LeftX + gamepad1RightX;
-            float frontRightPower = -gamepad1LeftY + gamepad1LeftX + gamepad1RightX;
-            float rearLeftPower = gamepad1LeftY + gamepad1LeftX + gamepad1RightX;
-            float rearRightPower = -gamepad1LeftY - gamepad1LeftX + gamepad1RightX;
+                    leftPos = rearLeftMotor.getCurrentPosition();
+                    rightPos = rearRightMotor.getCurrentPosition();
+
+                    telemetry.addData("ls,rs: ", "%.2f, %.2f", speed + leftoff, -speed + rightoff);
+                    telemetry.addData("l,r", "%d, %d", leftPos, rightPos);
+                    telemetry.update();
+
+                    if ((leftPos + rightPos) > 500) {
+                        leftoff += 0.005;
+                    }
+
+                    if ((leftPos + rightPos) < -500) {
+                        rightoff -= 0.005;
+                    }
+
+                    if (rightoff <= -0.2) {
+                        rightoff = -0.2;
+                    }
+
+                    if (leftoff >= 0.2) {
+                        leftoff = 0.2;
+                    }
+//                if ((rightoff <= -0.2) || (leftoff >= 0.2)) {
+                    //                  leftoff -= 0.05;
+                    //                rightoff += 0.05;
+                    //          }
+                    opModeIsActive();
+                    sleep(100);
+                } while (leftPos < linePos && rightPos > -linePos);
 
 
-            frontLeftPower = Range.clip(frontLeftPower/speedDivisor, -1, 1);
-            frontRightPower = Range.clip(frontRightPower/speedDivisor, -1, 1);
-            rearLeftPower = Range.clip(rearLeftPower/speedDivisor, -1, 1);
-            rearRightPower = Range.clip(rearRightPower/speedDivisor, -1, 1);
+                launchMotor.setPower(1.0);
 
-            // write the values to the motors
-            frontLeftMotor.setPower(frontLeftPower);
-            frontRightMotor.setPower(frontRightPower);
-            rearLeftMotor.setPower(rearLeftPower);
-            rearRightMotor.setPower(rearRightPower);
-            launchMotor.setPower(launchPower);
-            intakeMotor.setPower(intakePower);
-            updatePosition();
+                frontRightMotor.setPower(0);
+                rearLeftMotor.setPower(0);
+                rearRightMotor.setPower(0);
+                frontLeftMotor.setPower(0);
 
-            UGTrackables.activate();
-             for (VuforiaTrackable trackable : allTrackables) {
-                 if (((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible()) {
-                     telemetry.addData("found", trackable.getName());
+                sleep(3000);
+                opModeIsActive();
+                actuator.setPosition(0.4);
+                sleep(500);
+                actuator.setPosition(0.0);
+                sleep(500);
 
-                     OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                actuator.setPosition(0.4);
+                sleep(500);
+                actuator.setPosition(0.0);
+                sleep(500);
+                opModeIsActive();
+                intakeMotor.setPower(-0.6);
+                sleep(2000);
+                intakeMotor.setPower(0.0);
+                opModeIsActive();
+                actuator.setPosition(0.4);
+                sleep(500);
+                actuator.setPosition(0.0);
+                sleep(500);
+                opModeIsActive();
+                launchMotor.setPower(0.0);
+                linePos += 10000;
+                do {
+                    frontRightMotor.setPower(-speed + rightoff);
+                    rearLeftMotor.setPower(speed + leftoff);
+                    rearRightMotor.setPower(-speed + rightoff);
+                    frontLeftMotor.setPower(speed + leftoff);
 
-                     if (robotLocationTransform != null) {
-                         lastLocation = robotLocationTransform;
-                     }
-                 }
+
+                    leftPos = rearLeftMotor.getCurrentPosition();
+                    rightPos = rearRightMotor.getCurrentPosition();
+
+                    telemetry.addData("ls,rs: ", "%.2f, %.2f", speed + leftoff, -speed + rightoff);
+                    telemetry.addData("l,r", "%d, %d", leftPos, rightPos);
+                    telemetry.update();
+
+                    if ((leftPos + rightPos) > 500) {
+                        leftoff += 0.01;
+                    }
+
+                    if ((leftPos + rightPos) < -500) {
+                        rightoff -= 0.01;
+                    }
+
+                    if (rightoff <= -0.2) {
+                        rightoff = -0.2;
+                    }
+
+                    if (leftoff >= 0.2) {
+                        leftoff = 0.2;
+                    }
+//                if ((rightoff <= -0.2) || (leftoff >= 0.2)) {
+                    //                  leftoff -= 0.05;
+                    //                rightoff += 0.05;
+                    //          }
+                    opModeIsActive();
+                    sleep(50);
+                } while (leftPos < linePos && rightPos > -linePos);
+
+                frontRightMotor.setPower(0);
+                rearLeftMotor.setPower(0);
+                rearRightMotor.setPower(0);
+                frontLeftMotor.setPower(0);
+                sleep(50);
             }
-            if (lastLocation != null) {
-                telemetry.addData("Pos", lastLocation.formatAsTransform());
-            } else {
-                telemetry.addData("Pos", "Unknown");
-            }
-            telemetry.update();
-            sleep(50);
+            firsttime = false;
         }
     }
 }
+
